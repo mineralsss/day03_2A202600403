@@ -14,13 +14,15 @@ cp .env.example .env
 
 Mở file `.env` và điền API key:
 ```
-OPENAI_API_KEY=sk-...
+GITHUB_TOKEN=ghp_...
 DEFAULT_PROVIDER=openai
-DEFAULT_MODEL=gpt-4o
+DEFAULT_MODEL=gpt-4o-mini
 GEMINI_API_KEY=your_gemini_api_key_here
 LOCAL_MODEL_PATH=./models/gemma-4-E4B-it-Q4_1.gguf
 SERPAPI_API_KEY=your_serpapi_api_key_here
 ```
+
+`GITHUB_TOKEN` là lựa chọn mặc định cho provider `openai` trong lab này. Nếu muốn, bạn vẫn có thể dùng `OPENAI_API_KEY` và đặt thêm `OPENAI_BASE_URL` khi cần endpoint tùy chỉnh.
 
 ## 3. Khởi tạo database
 

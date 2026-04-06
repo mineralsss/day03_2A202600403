@@ -15,7 +15,8 @@ from src.tools.web_search_product import TOOL_SPEC as web_search_spec
 from src.tools.read_web_page import TOOL_SPEC as read_web_page_spec
 
 def get_llm():
-    provider_type = os.getenv("DEFAULT_PROVIDER", "local").lower()
+    provider_type = os.getenv("DEFAULT_PROVIDER", "openai").lower()
+    model_name = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
     
     if provider_type in ("google", "gemini"):
         from src.core.gemini_provider import GeminiProvider
@@ -27,16 +28,20 @@ def get_llm():
         
     elif provider_type == "openai":
         from src.core.openai_provider import OpenAIProvider
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key or api_key == "your_openai_api_key_here":
-            print("❌ Error: Please set your OPENAI_API_KEY in the .env file.")
+        api_key = os.getenv("GITHUB_TOKEN") or os.getenv("OPENAI_API_KEY")
+        if not api_key or api_key in {"your_github_token_here", "your_openai_api_key_here"}:
+            print("❌ Error: Please set GITHUB_TOKEN (or OPENAI_API_KEY) in the .env file.")
             sys.exit(1)
-        return OpenAIProvider(api_key=api_key)
+        return OpenAIProvider(model_name=model_name, api_key=api_key)
         
     else:
         from src.core.local_provider import LocalProvider
         model_path = os.getenv("LOCAL_MODEL_PATH", "./models/gemma-4-E4B-it-Q4_1.gguf")
-        return LocalProvider(model_path=model_path)
+        try:
+            return LocalProvider(model_path=model_path)
+        except ImportError as exc:
+            print(f"❌ Error: {exc}")
+            sys.exit(1)
 
 def main():
     print("⏳ Initializing LLM...")
