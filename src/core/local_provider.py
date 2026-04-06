@@ -30,27 +30,29 @@ class LocalProvider(LLMProvider):
             verbose=False
         )
 
+    def _build_messages(self, prompt: str, system_prompt: Optional[str] = None):
+        """Build a messages list for the chat completion API."""
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        return messages
+
     def generate(self, prompt: str, system_prompt: Optional[str] = None) -> Dict[str, Any]:
         start_time = time.time()
-        
-        # Phi-3 / Llama-3 style formatting if not handled by a template
-        full_prompt = prompt
-        if system_prompt:
-            full_prompt = f"<|system|>\n{system_prompt}<|end|>\n<|user|>\n{prompt}<|end|>\n<|assistant|>"
-        else:
-            full_prompt = f"<|user|>\n{prompt}<|end|>\n<|assistant|>"
 
-        response = self.llm(
-            full_prompt,
+        messages = self._build_messages(prompt, system_prompt)
+
+        response = self.llm.create_chat_completion(
+            messages=messages,
             max_tokens=1024,
-            stop=["<|end|>", "Observation:"],
-            echo=False
+            stop=["Observation:"],
         )
 
         end_time = time.time()
         latency_ms = int((end_time - start_time) * 1000)
 
-        content = response["choices"][0]["text"].strip()
+        content = response["choices"][0]["message"]["content"].strip()
         usage = {
             "prompt_tokens": response["usage"]["prompt_tokens"],
             "completion_tokens": response["usage"]["completion_tokens"],
@@ -65,20 +67,17 @@ class LocalProvider(LLMProvider):
         }
 
     def stream(self, prompt: str, system_prompt: Optional[str] = None) -> Generator[str, None, None]:
-        full_prompt = prompt
-        if system_prompt:
-            full_prompt = f"<|system|>\n{system_prompt}<|end|>\n<|user|>\n{prompt}<|end|>\n<|assistant|>"
-        else:
-            full_prompt = f"<|user|>\n{prompt}<|end|>\n<|assistant|>"
+        messages = self._build_messages(prompt, system_prompt)
 
-        stream = self.llm(
-            full_prompt,
+        stream = self.llm.create_chat_completion(
+            messages=messages,
             max_tokens=1024,
-            stop=["<|end|>", "Observation:"],
+            stop=["Observation:"],
             stream=True
         )
 
         for chunk in stream:
-            token = chunk["choices"][0]["text"]
+            delta = chunk["choices"][0].get("delta", {})
+            token = delta.get("content", "")
             if token:
                 yield token
